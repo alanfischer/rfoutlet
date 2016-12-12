@@ -69,6 +69,8 @@ void RFOutlet::sendState(char channel, int outlet, bool state){
 		send(m, 2);
 		delay(10);
 	}
+
+	delay(10);
 }
 
 #if RFOUTLET_DEBUG
