@@ -1,5 +1,7 @@
 #include <wiringPi.h>
 #include "RFOutlet.h"
+#include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 
 /* Timing from: https://aaroneiche.com/2016/01/31/weekend-project-wireless-outlet-control/ */
@@ -73,33 +75,17 @@ void RFOutlet::sendState(char channel, int outlet, bool state){
 	delay(10);
 }
 
-#if RFOUTLET_DEBUG
+#if RFOUTLET_MAIN
 
 int main(int argc, char **argv) {
-	RFOutlet outlet(26);
+	if (argc < 5) {
+		printf("%s [pin] [channel] [number] [on/off]\n", argv[0]);
+		return 1;
+	}
 
-	char c;
-	c = 'F';
-	outlet.sendState(c,1,true);
-	outlet.sendState(c,2,true);
-	outlet.sendState(c,3,true);
-	c = 'D';
-	outlet.sendState(c,1,true);
-	outlet.sendState(c,2,true);
-	outlet.sendState(c,3,true);
+	RFOutlet outlet(atoi(argv[1]));
 
-	delay(500);
-
-	c = 'F';
-	outlet.sendState(c,1,false);
-	outlet.sendState(c,2,false);
-	outlet.sendState(c,3,false);
-	c = 'D';
-	outlet.sendState(c,1,false);
-	outlet.sendState(c,2,false);
-	outlet.sendState(c,3,false);
-
-	delay(500);
+	outlet.sendState(argv[2][0], atoi(argv[3]), strcmp("on", argv[4])==0);
 }
 
 #endif
