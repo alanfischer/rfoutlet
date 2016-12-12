@@ -2,6 +2,8 @@
 #include "RFOutlet.h"
 #include <stdio.h>
 
+/* Timing from: https://aaroneiche.com/2016/01/31/weekend-project-wireless-outlet-control/ */
+
 RFOutlet::RFOutlet(int pin){
 	int result = wiringPiSetupGpio();
 	if(result != 0){
@@ -9,10 +11,8 @@ RFOutlet::RFOutlet(int pin){
 	}
 
 	this->pin = pin;
-	
 	longTime = 1800;
 	shortTime = 600;
-	tries = 5;
 
 	pinMode(pin, OUTPUT);
 	digitalWrite(pin, LOW);
@@ -21,20 +21,18 @@ RFOutlet::RFOutlet(int pin){
 void RFOutlet::send(uint8_t *message, int length) {
 	for(int i=0; i<length; ++i) {
 		uint8_t b=message[i];
-
-		for(int j=0; j<8; ++j) {
+		for(int j=0; j<8; ++j, b<<=1) {
 			digitalWrite(pin, HIGH);
 			delayMicroseconds((b&0x80) ? longTime : shortTime);
 			digitalWrite(pin, LOW);
 			delayMicroseconds((b&0x80) ? shortTime : longTime);
-			b <<= 1;
 		}
 	}
 }
 
 void RFOutlet::sendState(char channel, int outlet, bool state){
-	uint8_t head,body,tail;
-
+	uint8_t head, body, tail;
+	
 	head = 0b0110;
 
 	if (outlet == 1){
@@ -67,17 +65,18 @@ void RFOutlet::sendState(char channel, int outlet, bool state){
 	m[0] = (head << 4) | (body >> 4);
 	m[1] = (body << 4) | (tail);
 
-	for (int i=0; i<tries; ++i) {
+	for (int i=0; i<3; ++i) {
 		send(m, 2);
 		delay(10);
 	}
 }
-	
+
+#if RFOUTLET_DEBUG
+
 int main(int argc, char **argv) {
 	RFOutlet outlet(26);
 
 	char c;
-for(int i=0;i<50;++i){
 	c = 'F';
 	outlet.sendState(c,1,true);
 	outlet.sendState(c,2,true);
@@ -86,7 +85,9 @@ for(int i=0;i<50;++i){
 	outlet.sendState(c,1,true);
 	outlet.sendState(c,2,true);
 	outlet.sendState(c,3,true);
+
 	delay(500);
+
 	c = 'F';
 	outlet.sendState(c,1,false);
 	outlet.sendState(c,2,false);
@@ -95,6 +96,8 @@ for(int i=0;i<50;++i){
 	outlet.sendState(c,1,false);
 	outlet.sendState(c,2,false);
 	outlet.sendState(c,3,false);
+
 	delay(500);
 }
-}
+
+#endif
