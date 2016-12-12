@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 
+/* Author: Alan Fischer <alan@lightningtoads.com> 12/11/16 */
 /* Timing from: https://aaroneiche.com/2016/01/31/weekend-project-wireless-outlet-control/ */
 
 RFOutlet::RFOutlet(int pin){
