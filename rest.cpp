@@ -44,8 +44,8 @@ public:
 static http_response handle_request(http_message *hm){
 	vector<string> tokens=split(string(hm->uri.p,hm->uri.len), '/');
 	tokens.erase(tokens.begin());
-	if (tokens.size()==3) {
-		rf_outlet->sendState(tokens[0][0], atoi(tokens[1].c_str()), tokens[2]=="on");
+	if (tokens.size()==4) {
+		rf_outlet->sendState(RFOutlet::parseProduct(tokens[0].c_str()), tokens[1][0], atoi(tokens[2].c_str()), RFOutlet::parseState(tokens[3].c_str()));
 		return http_response(200, "\"Command sent\"");
 	}
 	else{
