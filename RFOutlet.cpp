@@ -59,7 +59,7 @@ void RFOutlet::sendState(product_t product, char channel, int outlet, bool state
 			shortTime = 600;
 		break;
 		case tr016_rev03:
-			shortTime = 185;
+			shortTime = 200;
 		break;
 	}
 	longTime = shortTime * 3;
