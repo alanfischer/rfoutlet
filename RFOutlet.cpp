@@ -7,6 +7,10 @@
 
 /* Author: Alan Fischer <alan@lightningtoads.com> 12/11/16 */
 /* Rev 2 timing from: https://aaroneiche.com/2016/01/31/weekend-project-wireless-outlet-control/ */
+	
+int stateIndex(RFOutlet::product_t product, char channel, int outlet) {
+	return (product * (RFOutlet::max_channels + RFOutlet::max_outlets)) + ((channel - 'A') * RFOutlet::max_outlets) + outlet;
+}
 
 RFOutlet::RFOutlet(int pin){
 	int result = wiringPiSetupGpio();
@@ -35,7 +39,7 @@ RFOutlet::product_t RFOutlet::parseProduct(const char* product) {
 }
 
 bool RFOutlet::parseState(const char* state) {
-	return strlen(state)>=2 && tolower(state[0]) == 'o' &&  tolower(state[1]) == 'n';
+	return strlen(state)>=2 && tolower(state[0]) == 'o' && tolower(state[1]) == 'n';
 }
 
 void RFOutlet::send(int shortTime, int longTime, uint8_t *message, int length) {
@@ -112,6 +116,12 @@ void RFOutlet::sendState(product_t product, char channel, int outlet, bool state
 			send(shortTime, longTime, m, 2);
 		}
 	}
+
+	states[stateIndex(product,channel,outlet)] = state;
+}
+
+bool RFOutlet::getState(product_t product, char channel, int outlet){
+	return states[stateIndex(product,channel,outlet)];
 }
 
 #if RFOUTLET_MAIN

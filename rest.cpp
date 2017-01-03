@@ -44,11 +44,28 @@ public:
 static http_response handle_request(http_message *hm){
 	vector<string> tokens=split(string(hm->uri.p,hm->uri.len), '/');
 	tokens.erase(tokens.begin());
-	if (tokens.size()==4) {
-		rf_outlet->sendState(RFOutlet::parseProduct(tokens[0].c_str()), tokens[1][0], atoi(tokens[2].c_str()), RFOutlet::parseState(tokens[3].c_str()));
-		return http_response(200, "\"Command sent\"");
+	if (tokens.size()>=3) {
+		RFOutlet::product_t product = RFOutlet::parseProduct(tokens[0].c_str());
+		char channel = tokens[1][0];
+		int outlet = atoi(tokens[2].c_str());
+		if (tokens.size()==4) {
+			bool state = RFOutlet::parseState(tokens[3].c_str());
+			rf_outlet->sendState(product, channel, outlet, state);
+			return http_response(200, "\"Command sent\"");
+		}
+		else if (tokens.size()==3) {
+			if (mg_vcmp(&hm->method, "GET") == 0) {
+				bool state = rf_outlet->getState(product, channel, outlet);
+				return http_response(200, state ? "true" : "false");
+			}
+			else if (mg_vcmp(&hm->method, "POST") == 0) {
+				bool state = mg_vcmp(&hm->message, "true") != 0;
+				rf_outlet->sendState(product, channel, outlet, state);
+				return http_response(200, "\"Command sent\"");
+			}
+		}
 	}
-	else{
+	else {
 		throw http_exception(404, "Endpoint not found");
 	}
 	return http_response(200, "");
@@ -141,7 +158,7 @@ int main(int argc,char **argv){
 		r.run();
 	}
 	else{
-		printf("%s [stop|start|restart]\n",argv[0]);
+		printf("%s [stop|start|restart] [pin]\n",argv[0]);
 		return -1;
 	}
 
