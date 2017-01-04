@@ -59,9 +59,16 @@ static http_response handle_request(http_message *hm){
 				return http_response(200, state ? "true" : "false");
 			}
 			else if (mg_vcmp(&hm->method, "POST") == 0) {
-				bool state = mg_vcmp(&hm->body, "true") != 0;
-				rf_outlet->sendState(product, channel, outlet, state);
-				return http_response(200, "\"Command sent\"");
+          			if (mg_vcmp(&hm->message, "true") == 0){
+					rf_outlet->sendState(product, channel, outlet, true);
+                                        return http_response(200, "\"Command sent\"");
+				}
+                                else if (mg_vcmp(&hm->message, "false") == 0){
+					rf_outlet->sendState(product, channel, outlet, false);
+                                        return http_response(200, "\"Command sent\"");
+				}
+
+                     		throw http_exception(404, "Command not found");
 			}
 		}
 	}
