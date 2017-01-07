@@ -39,7 +39,10 @@ RFOutlet::product_t RFOutlet::parseProduct(const char* product) {
 }
 
 bool RFOutlet::parseState(const char* state) {
-	return strlen(state)>=2 && tolower(state[0]) == 'o' && tolower(state[1]) == 'n';
+	return
+		(strlen(state)>=2 && tolower(state[0]) == 'o' && tolower(state[1]) == 'n') ||
+		(strlen(state)>=4 && tolower(state[0]) == 't' && tolower(state[1]) == 'r' && tolower(state[2]) == 'u' && tolower(state[3]) == 'e')
+	;
 }
 
 void RFOutlet::send(int shortTime, int longTime, uint8_t *message, int length) {
