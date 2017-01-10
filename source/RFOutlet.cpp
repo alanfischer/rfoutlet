@@ -9,7 +9,7 @@
 /* Rev 2 timing from: https://aaroneiche.com/2016/01/31/weekend-project-wireless-outlet-control/ */
 	
 int stateIndex(RFOutlet::product_t product, char channel, int outlet) {
-	return (product * (RFOutlet::max_channels + RFOutlet::max_outlets)) + ((channel - 'A') * RFOutlet::max_outlets) + outlet;
+	return (product * (RFOutlet::max_channels * RFOutlet::max_outlets)) + ((channel - 'A') * RFOutlet::max_outlets) + outlet;
 }
 
 RFOutlet::RFOutlet(int pin){
@@ -68,6 +68,8 @@ void RFOutlet::sendState(product_t product, char channel, int outlet, bool state
 		case tr016_rev03:
 			shortTime = 200;
 		break;
+        default:
+        break;
 	}
 	longTime = shortTime * 3;
 	

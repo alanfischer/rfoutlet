@@ -1,0 +1,5 @@
+#- Make RFOutlet have cmake build system
+#- Add mongoose as cmake findable dependency
+#- Build library and command line which can also daemonize
+- Add python bindings
+- Add Home Automation component
