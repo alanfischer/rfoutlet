@@ -1,5 +1,5 @@
-#include <wiringPi.h>
 #include "RFOutlet.h"
+#include <wiringPi.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -8,8 +8,8 @@
 /* Author: Alan Fischer <alan@lightningtoads.com> 12/11/16 */
 /* Rev 2 timing from: https://aaroneiche.com/2016/01/31/weekend-project-wireless-outlet-control/ */
 	
-int stateIndex(RFOutlet::product_t product, char channel, int outlet) {
-	return (product * (RFOutlet::max_channels * RFOutlet::max_outlets)) + ((channel - 'A') * RFOutlet::max_outlets) + outlet;
+int stateIndex(RFOutlet::product_t product, const char* channel, int outlet) {
+	return (product * (RFOutlet::max_channels * RFOutlet::max_outlets)) + ((channel[0] - 'A') * RFOutlet::max_outlets) + outlet;
 }
 
 RFOutlet::RFOutlet(int pin){
@@ -57,7 +57,7 @@ void RFOutlet::send(int shortTime, int longTime, uint8_t *message, int length) {
 	}
 }
 
-void RFOutlet::sendState(product_t product, char channel, int outlet, bool state){
+void RFOutlet::sendState(product_t product, const char *channel, int outlet, bool state){
 	uint8_t head, body, tail;
 	int shortTime=0, longTime=0;
 
@@ -68,8 +68,8 @@ void RFOutlet::sendState(product_t product, char channel, int outlet, bool state
 		case tr016_rev03:
 			shortTime = 200;
 		break;
-        default:
-        break;
+		default:
+		break;
 	}
 	longTime = shortTime * 3;
 	
@@ -94,13 +94,13 @@ void RFOutlet::sendState(product_t product, char channel, int outlet, bool state
 			body = 0b10100000;
 	}
 
-	if (channel == 'F'){
+	if (channel[0] == 'F'){
 		tail = 0b0000;
 	}
-	else if (channel == 'D'){
+	else if (channel[0] == 'D'){
 		tail = 0b0001;
 	}
-	else if (channel == 'C'){
+	else if (channel[0] == 'C'){
 		tail = 0b0010;
 	}
 
@@ -125,8 +125,21 @@ void RFOutlet::sendState(product_t product, char channel, int outlet, bool state
 	states[stateIndex(product,channel,outlet)] = state;
 }
 
-bool RFOutlet::getState(product_t product, char channel, int outlet){
+bool RFOutlet::getState(product_t product, const char *channel, int outlet){
 	return states[stateIndex(product,channel,outlet)];
+}
+
+extern "C" {
+
+RFOutlet::product_t RFOutlet_parseProduct(const char* product){return RFOutlet::parseProduct(product);}
+bool RFOutlet_parseState(const char* state){return RFOutlet::parseState(state);}
+
+RFOutlet *RFOutlet_new(int pin){return new RFOutlet(pin);}
+void RFOutlet_delete(RFOutlet *rfoutlet){delete rfoutlet;}
+
+void RFOutlet_sendState(RFOutlet *rfoutlet, RFOutlet::product_t product, const char* channel, int outlet, bool state){rfoutlet->sendState(product,channel,outlet,state);}
+bool RFOutlet_getState(RFOutlet *rfoutlet, RFOutlet::product_t product, const char* channel, int outlet){return rfoutlet->getState(product,channel,outlet);}
+
 }
 
 #if RFOUTLET_MAIN
@@ -137,7 +150,7 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 	RFOutlet outlet(atoi(argv[1]));
-	outlet.sendState(RFOutlet::parseProduct(argv[2]), argv[3][0], atoi(argv[4]), RFOutlet::parseState(argv[5]));
+	outlet.sendState(RFOutlet::parseProduct(argv[2]), argv[3], atoi(argv[4]), RFOutlet::parseState(argv[5]));
 }
 
 #endif

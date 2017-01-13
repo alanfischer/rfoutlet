@@ -46,21 +46,21 @@ static http_response handle_request(http_message *hm){
 	tokens.erase(tokens.begin());
 	if (tokens.size()>=3) {
 		RFOutlet::product_t product = RFOutlet::parseProduct(tokens[0].c_str());
-		char channel = tokens[1][0];
+		string channel = tokens[1];
 		int outlet = atoi(tokens[2].c_str());
 		if (tokens.size()==4) {
 			bool state = RFOutlet::parseState(tokens[3].c_str());
-			rf_outlet->sendState(product, channel, outlet, state);
+			rf_outlet->sendState(product, channel.c_str(), outlet, state);
 			return http_response(200, "\"Command sent\"");
 		}
 		else if (tokens.size()==3) {
 			if (mg_vcmp(&hm->method, "GET") == 0) {
-				bool state = rf_outlet->getState(product, channel, outlet);
+				bool state = rf_outlet->getState(product, channel.c_str(), outlet);
 				return http_response(200, state ? "true" : "false");
 			}
 			else if (mg_vcmp(&hm->method, "POST") == 0) {
 				bool state = RFOutlet::parseState(string(hm->body.p,hm->body.len).c_str());
-				rf_outlet->sendState(product, channel, outlet, state);
+				rf_outlet->sendState(product, channel.c_str(), outlet, state);
 				return http_response(200, "\"Command sent\"");
 			}
 		}

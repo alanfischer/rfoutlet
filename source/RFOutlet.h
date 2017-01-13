@@ -25,8 +25,8 @@ public:
 	static product_t parseProduct(const char* product);
 	static bool parseState(const char* state);
 
-	void sendState(product_t product, char channel, int outlet, bool state);
-	bool getState(product_t product, char channel, int outlet);
+	void sendState(product_t product, const char* channel, int outlet, bool state);
+	bool getState(product_t product, const char* channel, int outlet);
 
 	void send(int shortTime, int longTime, uint8_t *message, int length);
 
