@@ -2,7 +2,7 @@
 Control an rf switch using librfoutlet
 """
 import logging
-from ctypes import *
+import pyrfoutlet
 
 from homeassistant.components.switch import PLATFORM_SCHEMA
 from homeassistant.const import DEVICE_DEFAULT_NAME
@@ -13,36 +13,14 @@ _LOGGER = logging.getLogger(__name__)
 CONF_PIN = 'pin'
 CONF_OUTLETS = 'outlets'
 
-librfoutlet = cdll.LoadLibrary("./librfoutlet.dylib")
-librfoutlet.RFOutlet_parseProduct.argtypes = [c_char_p]
-librfoutlet.RFOutlet_new.argtypes = [c_int]
-librfoutlet.RFOutlet_new.restype = c_void_p
-librfoutlet.RFOutlet_delete.argtypes = [c_void_p]
-librfoutlet.RFOutlet_sendState.argtypes = [c_void_p, c_int, c_char_p, c_int, c_bool]
-librfoutlet.RFOutlet_getState.argtypes = [c_void_p, c_int, c_char_p, c_int]
-
-class RFOutlet(object):
-    def __init__(self, pin):
-        self.rfoutlet = librfoutlet.RFOutlet_new(pin)
-
-    def __del__(self):
-        librfoutlet.RFOutlet_delete(self.rfoutlet)
-
-    def setState(self, product, channel, outlet, state):
-        librfoutlet.RFOutlet_sendState(self.rfoutlet, product, channel, outlet, state)
-
-    def getState(self, product, channel, outlet):
-        return librfoutlet.RFOutlet_getState(self.rfoutlet, product, channel, outlet)
-
-
 # pylint: disable=unused-argument
 def setup_platform(hass, config, add_devices, discovery_info=None):
-    rfoutlet = RFOutlet(config.get(CONF_PIN))
+    rfoutlet = rfoutlet.RFOutlet(config.get(CONF_PIN))
     outlets = []
     for data in config.get(CONF_OUTLETS):
         name = data['name']
-        product = librfoutlet.RFOutlet_parseProduct(bytes(data['product'],'utf-8'))
-        channel = bytes(data['channel'],'utf-8')
+        product = rfoutlet.parseProduct(data['product'])
+        channel = data['channel']
         outlet = int(data['outlet'])
         outlets.append(RFOutletSwitch(rfoutlet, name, product, channel, outlet))
     add_devices(outlets)
