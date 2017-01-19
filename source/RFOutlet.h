@@ -28,9 +28,11 @@ public:
 	void sendState(product_t product, const char* channel, int outlet, bool state);
 	bool getState(product_t product, const char* channel, int outlet);
 
-	void send(int shortTime, int longTime, uint8_t *message, int length);
-
 protected:
+	void send(int shortTime, int longTime, uint8_t *message, int length);
+	static void write(int pin, bool value);
+	static void delay(int microseconds);
+
 	int pin;
 	int repeat;
 	int repeatDelayScaler;

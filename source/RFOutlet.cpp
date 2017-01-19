@@ -4,6 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdio.h>
+#include <time.h>
 
 /* Author: Alan Fischer <alan@lightningtoads.com> 12/11/16 */
 /* Rev 2 timing from: https://aaroneiche.com/2016/01/31/weekend-project-wireless-outlet-control/ */
@@ -12,20 +13,23 @@ int stateIndex(RFOutlet::product_t product, const char* channel, int outlet) {
 	return (product * (RFOutlet::max_channels * RFOutlet::max_outlets)) + ((channel[0] - 'A') * RFOutlet::max_outlets) + outlet;
 }
 
-RFOutlet::RFOutlet(int pin){
+RFOutlet::RFOutlet(int pin):
+	pin(pin),
+	repeat(4),
+	repeatDelayScaler(5),
+	longRepeat(2),
+	longRepeatDelayScaler(50)
+{
 	int result = wiringPiSetupGpio();
 	if(result != 0){
 		printf("wiringPi: %d\n",result);
 	}
 
-	this->pin = pin;
-	repeat = 4;
-	repeatDelayScaler = 5;
-	longRepeat = 2;
-	longRepeatDelayScaler = 50;
-
 	pinMode(pin, OUTPUT);
-	digitalWrite(pin, LOW);
+	write(pin, false);
+}
+
+RFOutlet::~RFoutlet(){
 }
 
 RFOutlet::product_t RFOutlet::parseProduct(const char* product) {
@@ -43,18 +47,6 @@ bool RFOutlet::parseState(const char* state) {
 		(strlen(state)>=2 && tolower(state[0]) == 'o' && tolower(state[1]) == 'n') ||
 		(strlen(state)>=4 && tolower(state[0]) == 't' && tolower(state[1]) == 'r' && tolower(state[2]) == 'u' && tolower(state[3]) == 'e')
 	;
-}
-
-void RFOutlet::send(int shortTime, int longTime, uint8_t *message, int length) {
-	for(int i=0; i<length; ++i) {
-		uint8_t b=message[i];
-		for(int j=0; j<8; ++j, b<<=1) {
-			digitalWrite(pin, HIGH);
-			delayMicroseconds((b&0x80) ? longTime : shortTime);
-			digitalWrite(pin, LOW);
-			delayMicroseconds((b&0x80) ? shortTime : longTime);
-		}
-	}
 }
 
 void RFOutlet::sendState(product_t product, const char *channel, int outlet, bool state){
@@ -110,12 +102,12 @@ void RFOutlet::sendState(product_t product, const char *channel, int outlet, boo
 	
 	for (int l=0; l<longRepeat; ++l) {
 		if (l > 0) {
-			delayMicroseconds((shortTime + longTime) * longRepeatDelayScaler);
+			delay((shortTime + longTime) * longRepeatDelayScaler);
 		}
 
 		for (int r=0; r<repeat; ++r) {
 			if (r > 0) {
-				delayMicroseconds((shortTime + longTime) * repeatDelayScaler);
+				delay((shortTime + longTime) * repeatDelayScaler);
 			}
 
 			send(shortTime, longTime, m, 2);
@@ -127,6 +119,29 @@ void RFOutlet::sendState(product_t product, const char *channel, int outlet, boo
 
 bool RFOutlet::getState(product_t product, const char *channel, int outlet){
 	return states[stateIndex(product,channel,outlet)];
+}
+
+void RFOutlet::send(int shortTime, int longTime, uint8_t *message, int length) {
+	for(int i=0; i<length; ++i) {
+		uint8_t b=message[i];
+		for(int j=0; j<8; ++j, b<<=1) {
+			write(pin, true);
+			delay((b&0x80) ? longTime : shortTime);
+			write(pin, false);
+			delay((b&0x80) ? shortTime : longTime);
+		}
+	}
+}
+
+void RFOutlet::write(int pin, bool value) {
+	digitalWrite(pin, value ? HIGH : LOW);
+}
+
+void RFOutlet::delay(int microseconds) {
+	struct timespec tv;
+	tv.tv_sec = microseconds / 1000000,
+	tv.tv_nsec = microseconds - tv.tv_sec * 1000000;
+	nanosleep(&tv,NULL);
 }
 
 extern "C" {
