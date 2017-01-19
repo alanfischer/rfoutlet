@@ -4,10 +4,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <algorithm>
 #include <fstream>
 #include <sstream>
@@ -29,13 +25,24 @@ RFOutlet::RFOutlet(int pin):
 	longRepeatDelayScaler(50)
 {
 	ofstream exportfile("/sys/class/gpio/export");
+	if(!exportfile){
+		fprintf(stderr,"Unable to export pin!\n");
+		return;
+	}
 	exportfile << pin;
 	exportfile.close();
+
+	// Delay for the pin to export
+	delay(500000);
 
 	stringstream filename;
 	filename << "/sys/class/gpio/gpio" << pin;
 
 	ofstream directionfile((filename.str() + "/direction").c_str());
+	if(!directionfile){
+		fprintf(stderr,"Unable to set pin direction!\n");
+		return;
+	}
 	directionfile << "out";
 	directionfile.close();
 
