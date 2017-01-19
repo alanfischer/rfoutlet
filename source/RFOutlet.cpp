@@ -1,10 +1,18 @@
 #include "RFOutlet.h"
-#include <wiringPi.h>
 #include <stdlib.h>
-#include <string.h>
 #include <ctype.h>
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <algorithm>
+#include <fstream>
+#include <sstream>
+
+using namespace std;
 
 /* Author: Alan Fischer <alan@lightningtoads.com> 12/11/16 */
 /* Rev 2 timing from: https://aaroneiche.com/2016/01/31/weekend-project-wireless-outlet-control/ */
@@ -20,33 +28,42 @@ RFOutlet::RFOutlet(int pin):
 	longRepeat(2),
 	longRepeatDelayScaler(50)
 {
-	int result = wiringPiSetupGpio();
-	if(result != 0){
-		printf("wiringPi: %d\n",result);
-	}
+	ofstream exportfile("/sys/class/gpio/export");
+	exportfile << pin;
+	exportfile.close();
 
-	pinMode(pin, OUTPUT);
+	stringstream filename;
+	filename << "/sys/class/gpio/gpio" << pin;
+
+	ofstream directionfile((filename.str() + "/direction").c_str());
+	directionfile << "out";
+	directionfile.close();
+
+	valuefilename = filename.str() + "/value";
+
 	write(pin, false);
 }
 
-RFOutlet::~RFoutlet(){
+RFOutlet::~RFOutlet(){
+	ofstream unexportfile("/sys/class/gpio/unexport");
+	unexportfile << pin;
+	unexportfile.close();
 }
 
-RFOutlet::product_t RFOutlet::parseProduct(const char* product) {
-	if(strstr(product, "2")!=0) {
+RFOutlet::product_t RFOutlet::parseProduct(const string& product) {
+	if(product.find("2")!=string::npos) {
 		return tr016_rev02;
 	}
-	else if(strstr(product, "3")!=0) {
+	else if(product.find("3")!=string::npos) {
 		return tr016_rev03;
 	}
 	return unknown_product;
 }
 
-bool RFOutlet::parseState(const char* state) {
-	return
-		(strlen(state)>=2 && tolower(state[0]) == 'o' && tolower(state[1]) == 'n') ||
-		(strlen(state)>=4 && tolower(state[0]) == 't' && tolower(state[1]) == 'r' && tolower(state[2]) == 'u' && tolower(state[3]) == 'e')
-	;
+bool RFOutlet::parseState(const string& state) {
+	string istate = state;
+	transform(istate.begin(),istate.end(),istate.begin(),::tolower);
+	return istate == "on" || istate == "true";
 }
 
 void RFOutlet::sendState(product_t product, const char *channel, int outlet, bool state){
@@ -134,13 +151,15 @@ void RFOutlet::send(int shortTime, int longTime, uint8_t *message, int length) {
 }
 
 void RFOutlet::write(int pin, bool value) {
-	digitalWrite(pin, value ? HIGH : LOW);
+	ofstream valuefile(valuefilename.c_str());
+	valuefile << (value ? "1" : "0");
+	valuefile.close();
 }
 
 void RFOutlet::delay(int microseconds) {
 	struct timespec tv;
 	tv.tv_sec = microseconds / 1000000,
-	tv.tv_nsec = microseconds - tv.tv_sec * 1000000;
+	tv.tv_nsec = (microseconds - tv.tv_sec * 1000000) * 1000;
 	nanosleep(&tv,NULL);
 }
 
