@@ -19,7 +19,6 @@ set (HDR
 set (EXE_NAME ${CMAKE_PROJECT_NAME})
 add_executable (${EXE_NAME} ${SRC})
 set_target_properties (${EXE_NAME} PROPERTIES COMPILE_DEFINITIONS "RFOUTLET_MAIN")
-target_link_libraries(${EXE_NAME} wiringPi)
 install (TARGETS ${EXE_NAME} DESTINATION bin)
 
 # Build library
