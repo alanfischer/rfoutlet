@@ -45,6 +45,8 @@ RFOutlet::RFOutlet(int pin):
 	longRepeat(2),
 	longRepeatDelayScaler(50)
 {
+	memset(states,0,sizeof(states));
+
 	ofstream exportfile("/sys/class/gpio/export");
 	if(!exportfile){
 		logf("Unable to export pin!");
@@ -95,7 +97,7 @@ bool RFOutlet::parseState(const string& state) {
 }
 
 void RFOutlet::sendState(product_t product, const char *channel, int outlet, bool state){
-	uint8_t head, body, tail;
+	uint8_t head=0, body=0, tail=0;
 	int shortTime=0, longTime=0;
 
 	switch (product) {

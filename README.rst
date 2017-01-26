@@ -1,7 +1,7 @@
 RFOutlet library
 ------------------
 
-A Raspbery PI C++ library with python bindings for controlling Holiday Time rf outlets.
+A Raspberry PI C++ library with python bindings for controlling Holiday Time RF outlets.
 
 It needs a 315 MHz transmitter module hooked up to a GPIO pin.
 

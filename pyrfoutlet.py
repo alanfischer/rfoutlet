@@ -60,4 +60,4 @@ class RFOutlet(object):
         return librfoutlet.RFOutlet_getState(self.rfoutlet, product, tochar(channel), outlet)
 
 def parseProduct(product):
-    return librfoutlet.RFOutlet_parseProduct(tochar(prouct))
+    return librfoutlet.RFOutlet_parseProduct(tochar(product))
