@@ -30,6 +30,9 @@ public:
 	void sendState(product_t product, const char* channel, int outlet, bool state);
 	bool getState(product_t product, const char* channel, int outlet);
 
+	static void logf(const char* format,...);
+	static void setLog(void (*cb)(const char*));
+
 protected:
 	void send(int shortTime, int longTime, uint8_t *message, int length);
 	void write(int pin, bool value);
@@ -42,6 +45,8 @@ protected:
 	int longRepeatDelayScaler;
 	std::string valuefilename;
 	bool states[(max_products * max_channels * max_outlets)];
+
+	static void (*log)(const char*);
 };
 
 #endif
