@@ -1,7 +1,7 @@
 """A setuptools based setup module.
 See:
 https://packaging.python.org/en/latest/distributing.html
-https://bitbucket.com/pallindo/itachip2ir
+https://bitbucket.com/pallindo/rfoutlet
 """
 
 from setuptools import setup, Extension
