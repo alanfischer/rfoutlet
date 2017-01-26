@@ -7,12 +7,33 @@
 #include <algorithm>
 #include <fstream>
 #include <sstream>
+#include <stdarg.h>
 
 using namespace std;
 
 /* Author: Alan Fischer <alan@lightningtoads.com> 12/11/16 */
 /* Rev 2 timing from: https://aaroneiche.com/2016/01/31/weekend-project-wireless-outlet-control/ */
-	
+
+void (*RFOutlet::log)(const char*) = NULL;
+
+void RFOutlet::setLog(void (*cb)(const char*)){
+	log = cb;
+}
+
+void RFOutlet::logf(const char* format, ...){
+	char data[1024];
+	va_list argptr;
+	va_start(argptr, format);
+	vsprintf(data, format, argptr);
+	va_end(argptr);
+	if(log){
+		log(data);
+	}
+	else{
+		printf("%s\n",data);
+	}
+}
+
 int stateIndex(RFOutlet::product_t product, const char* channel, int outlet) {
 	return (product * (RFOutlet::max_channels * RFOutlet::max_outlets)) + ((channel[0] - 'A') * RFOutlet::max_outlets) + outlet;
 }
@@ -26,7 +47,7 @@ RFOutlet::RFOutlet(int pin):
 {
 	ofstream exportfile("/sys/class/gpio/export");
 	if(!exportfile){
-		fprintf(stderr,"Unable to export pin!\n");
+		logf("Unable to export pin!");
 		return;
 	}
 	exportfile << pin;
@@ -40,7 +61,7 @@ RFOutlet::RFOutlet(int pin):
 
 	ofstream directionfile((filename.str() + "/direction").c_str());
 	if(!directionfile){
-		fprintf(stderr,"Unable to set pin direction!\n");
+		logf("Unable to set pin direction!");
 		return;
 	}
 	directionfile << "out";
@@ -180,6 +201,8 @@ void RFOutlet_delete(RFOutlet *rfoutlet){delete rfoutlet;}
 
 void RFOutlet_sendState(RFOutlet *rfoutlet, RFOutlet::product_t product, const char* channel, int outlet, bool state){rfoutlet->sendState(product,channel,outlet,state);}
 bool RFOutlet_getState(RFOutlet *rfoutlet, RFOutlet::product_t product, const char* channel, int outlet){return rfoutlet->getState(product,channel,outlet);}
+
+void RFOutlet_setLog(void (*cb)(const char*)){RFOutlet::setLog(cb);}
 
 }
 
