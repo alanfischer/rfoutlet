@@ -2,7 +2,6 @@
 Control an rf switch using librfoutlet
 """
 import logging
-import pyrfoutlet
 
 from homeassistant.components.switch import PLATFORM_SCHEMA
 from homeassistant.const import DEVICE_DEFAULT_NAME
@@ -15,11 +14,12 @@ CONF_OUTLETS = 'outlets'
 
 # pylint: disable=unused-argument
 def setup_platform(hass, config, add_devices, discovery_info=None):
-    rfoutlet = rfoutlet.RFOutlet(config.get(CONF_PIN))
+    import pyrfoutlet
+    rfoutlet = pyrfoutlet.RFOutlet(config.get(CONF_PIN))
     outlets = []
     for data in config.get(CONF_OUTLETS):
         name = data['name']
-        product = rfoutlet.parseProduct(data['product'])
+        product = pyrfoutlet.parseProduct(data['product'])
         channel = data['channel']
         outlet = int(data['outlet'])
         outlets.append(RFOutletSwitch(rfoutlet, name, product, channel, outlet))
