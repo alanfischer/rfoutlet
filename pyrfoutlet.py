@@ -38,7 +38,7 @@ else:
         return str(data) if data else None
 
 import logging
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 def logcb(data):
     logger.info(data.decode('utf-8'))
