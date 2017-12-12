@@ -1,6 +1,8 @@
 #include "RFOutlet.h"
 #include <fstream>
 #include <sstream>
+#include <algorithm>
+#include <stdarg.h>
 
 using namespace std;
 

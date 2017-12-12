@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <deque>
+#include <stdint.h>
 #include <pthread.h>
 
 class RFOutlet {
