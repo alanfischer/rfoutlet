@@ -1,13 +1,6 @@
 #include "RFOutlet.h"
-#include <stdlib.h>
-#include <ctype.h>
-#include <stdio.h>
-#include <string.h>
-#include <time.h>
-#include <algorithm>
 #include <fstream>
 #include <sstream>
-#include <stdarg.h>
 
 using namespace std;
 
@@ -16,41 +9,34 @@ using namespace std;
 
 void (*RFOutlet::log)(const char*) = NULL;
 
-void RFOutlet::setLog(void (*cb)(const char*)){
-	log = cb;
-}
+void RFOutlet::setLog(void (*cb)(const char*)) { log = cb; }
 
-void RFOutlet::logf(const char* format, ...){
+void RFOutlet::logf(const char* format, ...) {
 	char data[1024];
 	va_list argptr;
 	va_start(argptr, format);
 	vsprintf(data, format, argptr);
 	va_end(argptr);
-	if(log){
+	if (log) {
 		log(data);
 	}
-	else{
+	else {
 		printf("%s\n",data);
 	}
 }
 
-int stateIndex(RFOutlet::product_t product, const char* channel, int outlet) {
-	return (product * (RFOutlet::max_channels * RFOutlet::max_outlets)) + ((channel[0] - 'A') * RFOutlet::max_outlets) + outlet;
-}
-
 RFOutlet::RFOutlet(int pin):
 	pin(pin),
-	repeat(4),
+	repeat(3),
 	repeatDelayScaler(5),
-	longRepeat(2),
-	longRepeatDelayScaler(50)
+	longRepeat(0),
+	longRepeatDelayScaler(50),
+	running(false)
 {
-	memset(states,0,sizeof(states));
-
 	ofstream exportfile("/sys/class/gpio/export");
-	if(!exportfile){
+	if (!exportfile) {
 		logf("Unable to export pin!");
-		return;
+//		return;
 	}
 	exportfile << pin;
 	exportfile.close();
@@ -62,29 +48,52 @@ RFOutlet::RFOutlet(int pin):
 	filename << "/sys/class/gpio/gpio" << pin;
 
 	ofstream directionfile((filename.str() + "/direction").c_str());
-	if(!directionfile){
+	if (!directionfile) {
 		logf("Unable to set pin direction!");
-		return;
+//		return;
 	}
 	directionfile << "out";
 	directionfile.close();
 
 	valuefilename = filename.str() + "/value";
 
-	write(pin, false);
+	current = devices.end();
+
+	pthread_mutex_init(&mutex, NULL);
+
+	running = true;
+
+	if (pthread_create(&thread, NULL, start, (void*)this)) {
+		running = false;
+
+		logf("Unable to create thread!");
+//		return;
+	}
 }
 
-RFOutlet::~RFOutlet(){
+RFOutlet::~RFOutlet() {
+	if (running) {
+		running = false;
+		pthread_join(thread, NULL);
+	}
+
+	pthread_mutex_destroy(&mutex);
+
+	vector<device_t*>::iterator it;
+	for (it = devices.begin(); it != devices.end(); ++it) {
+		delete (*it);
+	}
+
 	ofstream unexportfile("/sys/class/gpio/unexport");
 	unexportfile << pin;
 	unexportfile.close();
 }
 
 RFOutlet::product_t RFOutlet::parseProduct(const string& product) {
-	if(product.find("2")!=string::npos) {
+	if (product.find("2")!=string::npos) {
 		return tr016_rev02;
 	}
-	else if(product.find("3")!=string::npos) {
+	else if (product.find("3")!=string::npos) {
 		return tr016_rev03;
 	}
 	return unknown_product;
@@ -96,7 +105,94 @@ bool RFOutlet::parseState(const string& state) {
 	return istate == "on" || istate == "true";
 }
 
-void RFOutlet::sendState(product_t product, const char *channel, int outlet, bool state){
+RFOutlet::device_t *RFOutlet::find(product_t product, const char *channel, int outlet) {
+	product_t p = product;
+	channel_t c = (channel_t) (channel[0] - 'A');
+	outlet_t  o = (outlet_t) outlet;
+
+	vector<device_t*>::iterator it;
+	for (it = devices.begin(); it != devices.end(); ++it) {
+		if ((*it)->product == p && (*it)->channel == c && (*it)->outlet == o) return *it;
+	}
+
+	device_t *d = new device_t();
+	d->product = p;
+	d->channel = c;
+	d->outlet = o;
+	devices.push_back(d);
+	current = devices.end();
+
+	return d;
+}
+
+void RFOutlet::setState(product_t product, const char *channel, int outlet, bool state) {
+	logf("Setting state for %d, %s, %d: %d", product, channel, outlet, state);
+
+	pthread_mutex_lock(&mutex);
+
+	device_t *d = find(product, channel, outlet);
+	d->state = state;
+
+	if (std::find(updatedDevices.begin(), updatedDevices.end(), d) == updatedDevices.end()) {
+		updatedDevices.push_back(d);
+	}
+
+	pthread_mutex_unlock(&mutex);
+}
+
+bool RFOutlet::getState(product_t product, const char *channel, int outlet) {
+	bool state;
+
+	pthread_mutex_lock(&mutex);
+
+	device_t *d = find(product, channel, outlet);
+	state = d->state;
+
+	pthread_mutex_unlock(&mutex);
+
+	return state;
+}
+
+void* RFOutlet::start(void* self) {
+	((RFOutlet*)self)->run();
+
+	return NULL;
+}
+
+void RFOutlet::run() {
+	unsigned int count = 0;
+
+	write(pin, false);
+
+	while (running) {
+		pthread_mutex_lock(&mutex);
+
+		if (!updatedDevices.empty()) {
+			device_t* device = updatedDevices.front();
+			updatedDevices.pop_front();
+			sendState(device->product, device->channel + 'A', device->outlet, device->state);
+		}
+		else if ((count++) % 1000 == 0) {
+			if (current == devices.end()) {
+				current = devices.begin();
+			}
+
+			if (current != devices.end()) {
+				device_t* device = *current;
+				sendState(device->product, device->channel + 'A', device->outlet, device->state);
+				current++;
+			}
+		}
+
+		pthread_mutex_unlock(&mutex);
+
+		delay(1000);
+	}
+}
+
+void RFOutlet::sendState(product_t product, const char channel, int outlet, bool state) {
+	logf("Sending state for %d, %c, %d: %d", product, channel, outlet, state);
+
 	uint8_t head=0, body=0, tail=0;
 	int shortTime=0, longTime=0;
 
@@ -133,13 +229,13 @@ void RFOutlet::sendState(product_t product, const char *channel, int outlet, boo
 			body = 0b10100000;
 	}
 
-	if (channel[0] == 'F'){
+	if (channel == 'F'){
 		tail = 0b0000;
 	}
-	else if (channel[0] == 'D'){
+	else if (channel == 'D'){
 		tail = 0b0001;
 	}
-	else if (channel[0] == 'C'){
+	else if (channel == 'C'){
 		tail = 0b0010;
 	}
 
@@ -147,12 +243,12 @@ void RFOutlet::sendState(product_t product, const char *channel, int outlet, boo
 	m[0] = (head << 4) | (body >> 4);
 	m[1] = (body << 4) | (tail);
 	
-	for (int l=0; l<longRepeat; ++l) {
+	for (int l=0; l<longRepeat + 1; ++l) {
 		if (l > 0) {
 			delay((shortTime + longTime) * longRepeatDelayScaler);
 		}
 
-		for (int r=0; r<repeat; ++r) {
+		for (int r=0; r<repeat + 1; ++r) {
 			if (r > 0) {
 				delay((shortTime + longTime) * repeatDelayScaler);
 			}
@@ -160,18 +256,12 @@ void RFOutlet::sendState(product_t product, const char *channel, int outlet, boo
 			send(shortTime, longTime, m, 2);
 		}
 	}
-
-	states[stateIndex(product,channel,outlet)] = state;
-}
-
-bool RFOutlet::getState(product_t product, const char *channel, int outlet){
-	return states[stateIndex(product,channel,outlet)];
 }
 
 void RFOutlet::send(int shortTime, int longTime, uint8_t *message, int length) {
-	for(int i=0; i<length; ++i) {
+	for (int i=0; i<length; ++i) {
 		uint8_t b=message[i];
-		for(int j=0; j<8; ++j, b<<=1) {
+		for (int j=0; j<8; ++j, b<<=1) {
 			write(pin, true);
 			delay((b&0x80) ? longTime : shortTime);
 			write(pin, false);
@@ -195,16 +285,16 @@ void RFOutlet::delay(int microseconds) {
 
 extern "C" {
 
-RFOutlet::product_t RFOutlet_parseProduct(const char* product){return RFOutlet::parseProduct(product);}
+RFOutlet::product_t RFOutlet_parseProduct(const char* product) {return RFOutlet::parseProduct(product);}
 bool RFOutlet_parseState(const char* state){return RFOutlet::parseState(state);}
 
-RFOutlet *RFOutlet_new(int pin){return new RFOutlet(pin);}
-void RFOutlet_delete(RFOutlet *rfoutlet){delete rfoutlet;}
+RFOutlet *RFOutlet_new(int pin) {return new RFOutlet(pin);}
+void RFOutlet_delete(RFOutlet *rfoutlet) {delete rfoutlet;}
 
-void RFOutlet_sendState(RFOutlet *rfoutlet, RFOutlet::product_t product, const char* channel, int outlet, bool state){rfoutlet->sendState(product,channel,outlet,state);}
-bool RFOutlet_getState(RFOutlet *rfoutlet, RFOutlet::product_t product, const char* channel, int outlet){return rfoutlet->getState(product,channel,outlet);}
+void RFOutlet_setState(RFOutlet *rfoutlet, RFOutlet::product_t product, const char* channel, int outlet, bool state) {rfoutlet->setState(product,channel,outlet,state);}
+bool RFOutlet_getState(RFOutlet *rfoutlet, RFOutlet::product_t product, const char* channel, int outlet) {return rfoutlet->getState(product,channel,outlet);}
 
-void RFOutlet_setLog(void (*cb)(const char*)){RFOutlet::setLog(cb);}
+void RFOutlet_setLog(void (*cb)(const char*)) {RFOutlet::setLog(cb);}
 
 }
 
@@ -216,7 +306,7 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 	RFOutlet outlet(atoi(argv[1]));
-	outlet.sendState(RFOutlet::parseProduct(argv[2]), argv[3], atoi(argv[4]), RFOutlet::parseState(argv[5]));
+	outlet.setState(RFOutlet::parseProduct(argv[2]), argv[3], atoi(argv[4]), RFOutlet::parseState(argv[5]));
 }
 
 #endif

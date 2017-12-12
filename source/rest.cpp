@@ -28,20 +28,20 @@ vector<string> split(const string &s, char delim) {
 	return elems;
 }
 
-class http_exception:public runtime_error{
+class http_exception:public runtime_error {
 public:
-	http_exception(int status_code,const char *what):status_code(status_code),runtime_error(what){}
+	http_exception(int status_code,const char *what):status_code(status_code),runtime_error(what) { }
 	int status_code;
 };
 
-class http_response{
+class http_response {
 public:
-	http_response(int status_code,const string &text):status_code(status_code),text(text){}
+	http_response(int status_code,const string &text):status_code(status_code),text(text) { }
 	int status_code;
 	string text;
 };
 
-static http_response handle_request(http_message *hm){
+static http_response handle_request(http_message *hm) {
 	vector<string> tokens=split(string(hm->uri.p,hm->uri.len), '/');
 	tokens.erase(tokens.begin());
 	if (tokens.size()>=3) {
@@ -71,7 +71,7 @@ static http_response handle_request(http_message *hm){
 	return http_response(200, "");
 }
 
-static void ev_handler(struct mg_connection *nc, int ev, void *ev_data){
+static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
 	struct http_message *hm = (struct http_message *) ev_data;
 
 	switch (ev) {
@@ -80,10 +80,10 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data){
 			http_response response(200, "");
 
 			if (mg_vcmp(&hm->method, "OPTIONS") != 0){
-				try{
+				try {
 					response = handle_request(hm);
 				}
-				catch(http_exception &e){
+				catch (http_exception &e) {
 					response = http_response(e.status_code, e.what());
 					status = e.what();
 				}
@@ -92,12 +92,12 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data){
 			mg_printf(nc, "HTTP/1.1 %d %s\r\n", response.status_code, status.c_str());
 			mg_printf(nc, "Transfer-Encoding: chunked\r\n");
 			mg_printf(nc, "Cache-Control: no-cache\r\n");
-			if (mg_vcmp(&hm->method, "OPTIONS") == 0){
+			if (mg_vcmp(&hm->method, "OPTIONS") == 0) {
 				mg_printf(nc, "Allow: HEAD,GET,OPTIONS\r\n");
 				mg_printf(nc, "Access-Control-Allow-Origin: *\r\n");
 				mg_printf(nc, "Access-Control-Allow-Headers: content-type\r\n");
 			}
-			else{
+			else {
 				mg_printf(nc, "Access-Control-Allow-Origin: *\r\n");
 				mg_printf(nc, "Access-Control-Allow-Headers: content-type\r\n");
 				mg_printf(nc, "Content-Type: application/json\r\n");
@@ -111,11 +111,11 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data){
 	}
 }
 
-class rest:public Daemon{
+class rest:public Daemon {
 public:
-	rest(int pin=0):Daemon("/tmp/remote.pid","/dev/null","/tmp/rfoutlet.log","/tmp/rfoutlet.err"),pin(pin){}
+	rest(int pin=0):Daemon("/tmp/remote.pid","/dev/null","/tmp/rfoutlet.log","/tmp/rfoutlet.err"),pin(pin) { }
 
-	void run(){
+	void run() {
 		rf_outlet=new RFOutlet(pin);
 
 		mg_mgr_init(&mgr, NULL);
@@ -140,24 +140,24 @@ public:
 	struct mg_connection *nc;
 };
 
-int main(int argc,char **argv){
-	if(argc>1 && strcmp(argv[1],"stop")==0){
+int main(int argc,char **argv) {
+	if (argc>1 && strcmp(argv[1],"stop")==0) {
 		rest r;
 		r.stop();
 	}
-	else if(argc>2 && strcmp(argv[1],"start")==0){
+	else if (argc>2 && strcmp(argv[1],"start")==0) {
 		rest r(atoi(argv[2]));
 		r.start();
 	}
-	else if(argc>2 && strcmp(argv[1],"restart")==0){
+	else if (argc>2 && strcmp(argv[1],"restart")==0) {
 		rest r(atoi(argv[2]));
 		r.restart();
 	}
-	else if(argc>2 && strcmp(argv[1],"interactive")==0){
+	else if (argc>2 && strcmp(argv[1],"interactive")==0) {
 		rest r(atoi(argv[2]));
 		r.run();
 	}
-	else{
+	else {
 		printf("%s [stop|start|restart] [pin]\n",argv[0]);
 		return -1;
 	}

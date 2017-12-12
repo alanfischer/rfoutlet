@@ -5,22 +5,22 @@
 using namespace std;
 
 string atexit_pidfile;
-void delpid(){
+void delpid() {
 	unlink(atexit_pidfile.c_str());
 }
 
-class Daemon{
+class Daemon {
 public:
-	Daemon(string pidfile, string in, string out, string err):pidfile(pidfile),in(in),out(out),err(err){
+	Daemon(string pidfile, string in, string out, string err):pidfile(pidfile),in(in),out(out),err(err) {
 		atexit_pidfile = pidfile;
 	}
 
-	void daemonize(){
+	void daemonize() {
 		pid_t pid = fork();
-		if(pid > 0){
+		if (pid > 0) {
 			exit(0);
 		}
-		else if(pid < 0){
+		else if (pid < 0) {
 			fprintf(stderr, "Unable to fork");
 			exit(1);
 		}
@@ -31,10 +31,10 @@ public:
 
 		// UNIX double-fork magic
 		pid = fork();
-		if(pid > 0){
+		if (pid > 0) {
 			exit(0);
 		}
-		else if(pid < 0){
+		else if (pid < 0) {
 			fprintf(stderr, "Unable to fork #2");
 			exit(1);
 		}
@@ -48,7 +48,7 @@ public:
 
 		pid = getpid();
 		FILE *pidfd = fopen(pidfile.c_str(), "w+");
-		if(pidfd){
+		if (pidfd) {
 			fprintf(pidfd, "%d", pid);
 			fclose(pidfd);
 		}
@@ -56,15 +56,15 @@ public:
 		atexit(delpid);
 	}
 
-	void start(){
+	void start() {
 		int pid=0;
 		FILE *pidfd = fopen(pidfile.c_str(), "r");
-		if(pidfd){
+		if (pidfd) {
 			fscanf(pidfd, "%d", &pid);
 			fclose(pidfd);
 		}
 
-		if(pid){
+		if (pid) {
 			fprintf(stderr,"pidfile %s already exists. Daemon already running?\n",pidfile.c_str());
 			exit(1);
 		}
@@ -73,30 +73,30 @@ public:
 		run();
 	}
 
-	void stop(){
+	void stop() {
 		int pid=0;
 		FILE *pidfd = fopen(pidfile.c_str(), "r");
-		if(pidfd){
+		if (pidfd) {
 			fscanf(pidfd, "%d", &pid);
 			fclose(pidfd);
 		}
 
-		if(!pid){
+		if (!pid) {
 			fprintf(stderr,"pidfile %s does not exist.  Daemon not running?\n",pidfile.c_str());
 			return;
 		}
 
 		int result = kill(pid, SIGTERM);
-		if(result < 0){
+		if (result < 0) {
 			fprintf(stderr,"Unable to kill process\n");
 			exit(1);
 		}
-		else{
+		else {
 			unlink(pidfile.c_str());
 		}
 	}
 
-	void restart(){
+	void restart() {
 		stop();
 		start();
 	}

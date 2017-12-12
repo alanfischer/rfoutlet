@@ -25,7 +25,7 @@ librfoutlet.RFOutlet_parseProduct.argtypes = [c_char_p]
 librfoutlet.RFOutlet_new.argtypes = [c_int]
 librfoutlet.RFOutlet_new.restype = c_void_p
 librfoutlet.RFOutlet_delete.argtypes = [c_void_p]
-librfoutlet.RFOutlet_sendState.argtypes = [c_void_p, c_int, c_char_p, c_int, c_bool]
+librfoutlet.RFOutlet_setState.argtypes = [c_void_p, c_int, c_char_p, c_int, c_bool]
 librfoutlet.RFOutlet_getState.argtypes = [c_void_p, c_int, c_char_p, c_int]
 c_logcb_p = CFUNCTYPE(None, c_char_p)
 librfoutlet.RFOutlet_setLog.argtypes = [c_logcb_p]
@@ -54,7 +54,7 @@ class RFOutlet(object):
         librfoutlet.RFOutlet_delete(self.rfoutlet)
 
     def setState(self, product, channel, outlet, state):
-        librfoutlet.RFOutlet_sendState(self.rfoutlet, product, tochar(channel), outlet, state)
+        librfoutlet.RFOutlet_setState(self.rfoutlet, product, tochar(channel), outlet, state)
 
     def getState(self, product, channel, outlet):
         return librfoutlet.RFOutlet_getState(self.rfoutlet, product, tochar(channel), outlet)

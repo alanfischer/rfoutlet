@@ -29,12 +29,12 @@ How to use
             logging.basicConfig(level=logging.INFO) # Get log messages from pyrfoutlet
 
             pin = 4
-            outlet = pyrfoutlet.RFOutlet(pin)
+            rfoutlet = pyrfoutlet.RFOutlet(pin)
 
             product = pyrfoutlet.parseProduct("REV3")
             channel = "F"
             outlet = 1
-            outlet.setState(product,channel,outlet,True)
+            rfoutlet.setState(product,channel,outlet,True)
 
 License
 -------
