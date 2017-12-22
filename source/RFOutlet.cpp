@@ -31,7 +31,7 @@ RFOutlet::RFOutlet(int pin):
 	pin(pin),
 	repeat(3),
 	repeatDelayScaler(5),
-	longRepeat(0),
+	longRepeat(1),
 	longRepeatDelayScaler(50),
 	running(false)
 {
@@ -239,6 +239,12 @@ void RFOutlet::sendState(product_t product, const char channel, int outlet, bool
 	}
 	else if (channel == 'C'){
 		tail = 0b0010;
+	}
+	else if (channel == 'B'){
+		tail = 0b0100;
+	}
+	else if (channel == 'A'){
+		tail = 0b1000;
 	}
 
 	uint8_t m[2];
