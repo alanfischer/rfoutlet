@@ -1,7 +1,7 @@
 """A setuptools based setup module.
 See:
 https://packaging.python.org/en/latest/distributing.html
-https://bitbucket.com/pallindo/rfoutlet
+https://github.com/alanfischer/rfoutlet
 """
 
 from setuptools import setup, Extension
@@ -23,7 +23,7 @@ setup(
     version='0.0.2',
     description='A library for controlling Holiday Time rf outlets',
     long_description=long_description,
-    url='https://bitbucket.com/pallindo/rfoutlet',
+    url='https://github.com/alanfischer/rfoutlet',
     author='Alan Fischer',
     author_email='alan@lightningtoads.com',
     license='MIT',
