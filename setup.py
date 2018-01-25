@@ -20,7 +20,7 @@ module = Extension('rfoutlet',
 
 setup(
     name='pyrfoutlet',
-    version='0.0.1',
+    version='0.0.2',
     description='A library for controlling Holiday Time rf outlets',
     long_description=long_description,
     url='https://bitbucket.com/pallindo/rfoutlet',
