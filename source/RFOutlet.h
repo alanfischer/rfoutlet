@@ -9,14 +9,15 @@
 
 class RFOutlet {
 public:
-	RFOutlet(int pin);
+	RFOutlet(int pin315, int pin433);
 	~RFOutlet();
 
 	typedef enum {
 		unknown_product = 0,
 		tr016_rev02 = 2,
 		tr016_rev03 = 3,
-		max_products = 4,
+		tr016_rev04 = 4,
+		max_products = 5,
 	} product_t;
 
 	typedef enum {
@@ -46,18 +47,20 @@ public:
 protected:
 	static void* start(void *self);
 	void run();
+	std::string setupPin(int pin);
+	void closePin(int pin);
 	device_t *find(product_t product, const char *channel, int outlet);
 	void sendState(product_t product, char channel, int outlet, bool state);
-	void send(int shortTime, int longTime, uint8_t *message, int length);
+	void send(int pin, int shortTime, int longTime, uint8_t *message, int length);
 	void write(int pin, bool value);
 	void delay(int microseconds);
 
-	int pin;
+	int pin315, pin433;
+	std::string valuefilename315, valuefilename433;
 	int repeat;
 	int repeatDelayScaler;
 	int longRepeat;
 	int longRepeatDelayScaler;
-	std::string valuefilename;
 	pthread_t thread;
 	pthread_mutex_t mutex;
 	std::vector<device_t*> devices;

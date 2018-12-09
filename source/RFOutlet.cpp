@@ -27,37 +27,21 @@ void RFOutlet::logf(const char* format, ...) {
 	}
 }
 
-RFOutlet::RFOutlet(int pin):
-	pin(pin),
+RFOutlet::RFOutlet(int pin315, int pin433):
+	pin315(pin315),
+	pin433(pin433),
 	repeat(3),
 	repeatDelayScaler(5),
 	longRepeat(1),
 	longRepeatDelayScaler(50),
 	running(false)
 {
-	ofstream exportfile("/sys/class/gpio/export");
-	if (!exportfile) {
-		logf("Unable to export pin!");
-//		return;
+	if (pin315 >= 0) {
+		valuefilename315 = setupPin(pin315);
 	}
-	exportfile << pin;
-	exportfile.close();
-
-	// Delay for the pin to export
-	delay(500000);
-
-	stringstream filename;
-	filename << "/sys/class/gpio/gpio" << pin;
-
-	ofstream directionfile((filename.str() + "/direction").c_str());
-	if (!directionfile) {
-		logf("Unable to set pin direction!");
-//		return;
+	if (pin433 >= 0) {
+		valuefilename433 = setupPin(pin433);
 	}
-	directionfile << "out";
-	directionfile.close();
-
-	valuefilename = filename.str() + "/value";
 
 	current = devices.end();
 
@@ -86,6 +70,42 @@ RFOutlet::~RFOutlet() {
 		delete (*it);
 	}
 
+	if (pin315 >= 0) {
+		closePin(pin315);
+	}
+	if (pin433 >= 0) {
+		closePin(pin433);
+	}
+}
+
+string RFOutlet::setupPin(int pin) {
+	ofstream exportfile("/sys/class/gpio/export");
+	if (!exportfile) {
+		logf("Unable to export pin!");
+//		return;
+	}
+	exportfile << pin;
+	exportfile.close();
+
+	// Delay for the pin to export
+	delay(500000);
+
+	stringstream filename;
+	filename << "/sys/class/gpio/gpio" << pin;
+
+	ofstream directionfile((filename.str() + "/direction").c_str());
+	if (!directionfile) {
+		logf("Unable to set pin direction!");
+//		return;
+	}
+	directionfile << "out";
+	directionfile.close();
+
+	string valuefilename = filename.str() + "/value";
+	return valuefilename;
+}
+
+void RFOutlet::closePin(int pin) {
 	ofstream unexportfile("/sys/class/gpio/unexport");
 	unexportfile << pin;
 	unexportfile.close();
@@ -97,6 +117,9 @@ RFOutlet::product_t RFOutlet::parseProduct(const string& product) {
 	}
 	else if (product.find("3")!=string::npos) {
 		return tr016_rev03;
+	}
+	else if (product.find("4")!=string::npos) {
+		return tr016_rev04;
 	}
 	return unknown_product;
 }
@@ -164,7 +187,12 @@ void* RFOutlet::start(void* self) {
 void RFOutlet::run() {
 	unsigned int count = 0;
 
-	write(pin, false);
+	if (pin315 >= 0) {
+		write(pin315, false);
+	}
+	if (pin433 >= 0) {
+		write(pin433, false);
+	}
 
 	while (running) {
 		pthread_mutex_lock(&mutex);
@@ -197,13 +225,20 @@ void RFOutlet::sendState(product_t product, const char channel, int outlet, bool
 
 	uint8_t head=0, body=0, tail=0;
 	int shortTime=0, longTime=0;
+	int pin=0;
 
 	switch (product) {
 		case tr016_rev02:
 			shortTime = 600;
+			pin = pin315;
 		break;
 		case tr016_rev03:
 			shortTime = 200;
+			pin = pin315;
+		break;
+		case tr016_rev04:
+			shortTime = 200;
+			pin = pin433;
 		break;
 		default:
 		break;
@@ -261,12 +296,12 @@ void RFOutlet::sendState(product_t product, const char channel, int outlet, bool
 				delay((shortTime + longTime) * repeatDelayScaler);
 			}
 
-			send(shortTime, longTime, m, 2);
+			send(pin, shortTime, longTime, m, 2);
 		}
 	}
 }
 
-void RFOutlet::send(int shortTime, int longTime, uint8_t *message, int length) {
+void RFOutlet::send(int pin, int shortTime, int longTime, uint8_t *message, int length) {
 	for (int i=0; i<length; ++i) {
 		uint8_t b=message[i];
 		for (int j=0; j<8; ++j, b<<=1) {
@@ -279,6 +314,12 @@ void RFOutlet::send(int shortTime, int longTime, uint8_t *message, int length) {
 }
 
 void RFOutlet::write(int pin, bool value) {
+	string valuefilename;
+	if (pin == pin315) {
+		valuefilename = valuefilename315;
+	} else if (pin == pin433) {
+		valuefilename = valuefilename433;
+	}
 	ofstream valuefile(valuefilename.c_str());
 	valuefile << (value ? "1" : "0");
 	valuefile.close();
@@ -296,7 +337,7 @@ extern "C" {
 RFOutlet::product_t RFOutlet_parseProduct(const char* product) {return RFOutlet::parseProduct(product);}
 bool RFOutlet_parseState(const char* state){return RFOutlet::parseState(state);}
 
-RFOutlet *RFOutlet_new(int pin) {return new RFOutlet(pin);}
+RFOutlet *RFOutlet_new(int pin315, int pin433) {return new RFOutlet(pin315, pin433);}
 void RFOutlet_delete(RFOutlet *rfoutlet) {delete rfoutlet;}
 
 void RFOutlet_setState(RFOutlet *rfoutlet, RFOutlet::product_t product, const char* channel, int outlet, bool state) {rfoutlet->setState(product,channel,outlet,state);}
@@ -310,11 +351,11 @@ void RFOutlet_setLog(void (*cb)(const char*)) {RFOutlet::setLog(cb);}
 
 int main(int argc, char **argv) {
 	if (argc < 6) {
-		printf("%s [pin] [product] [channel] [number] [on/off]\n", argv[0]);
+		printf("%s [pin315] [pin433] [product] [channel] [number] [on/off]\n", argv[0]);
 		return 1;
 	}
-	RFOutlet outlet(atoi(argv[1]));
-	outlet.setState(RFOutlet::parseProduct(argv[2]), argv[3], atoi(argv[4]), RFOutlet::parseState(argv[5]));
+	RFOutlet outlet(atoi(argv[1]), atoi(argv[2]));
+	outlet.setState(RFOutlet::parseProduct(argv[3]), argv[4], atoi(argv[5]), RFOutlet::parseState(argv[6]));
 }
 
 #endif
