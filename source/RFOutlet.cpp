@@ -36,6 +36,8 @@ RFOutlet::RFOutlet(int pin315, int pin433):
 	longRepeatDelayScaler(50),
 	running(false)
 {
+	logf("RFOutlet: pin 315:%d pin 433:%d", pin315, pin433);
+
 	if (pin315 >= 0) {
 		valuefilename315 = setupPin(pin315);
 	}

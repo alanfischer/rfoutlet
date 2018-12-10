@@ -9,13 +9,14 @@ from homeassistant.helpers.entity import ToggleEntity
 
 _LOGGER = logging.getLogger(__name__)
 
-CONF_PIN = 'pin'
+CONF_PIN315 = 'pin315'
+CONF_PIN433 = 'pin433'
 CONF_OUTLETS = 'outlets'
 
 # pylint: disable=unused-argument
 def setup_platform(hass, config, add_devices, discovery_info=None):
     import pyrfoutlet
-    rfoutlet = pyrfoutlet.RFOutlet(config.get(CONF_PIN))
+    rfoutlet = pyrfoutlet.RFOutlet(config.get(CONF_PIN315), config.get(CONF_PIN433))
     outlets = []
     for data in config.get(CONF_OUTLETS):
         name = data['name']

@@ -22,7 +22,7 @@ if librfoutlet is None:
     raise OSError("Unable to find rfoutlet library")
 
 librfoutlet.RFOutlet_parseProduct.argtypes = [c_char_p]
-librfoutlet.RFOutlet_new.argtypes = [c_int]
+librfoutlet.RFOutlet_new.argtypes = [c_int, c_int]
 librfoutlet.RFOutlet_new.restype = c_void_p
 librfoutlet.RFOutlet_delete.argtypes = [c_void_p]
 librfoutlet.RFOutlet_setState.argtypes = [c_void_p, c_int, c_char_p, c_int, c_bool]
@@ -47,8 +47,8 @@ clogcb = c_logcb_p(logcb)
 librfoutlet.RFOutlet_setLog(clogcb)
 
 class RFOutlet(object):
-    def __init__(self, pin):
-        self.rfoutlet = librfoutlet.RFOutlet_new(pin)
+    def __init__(self, pin315, pin433):
+        self.rfoutlet = librfoutlet.RFOutlet_new(pin315, pin433)
 
     def __del__(self):
         librfoutlet.RFOutlet_delete(self.rfoutlet)
