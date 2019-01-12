@@ -6,6 +6,7 @@ import logging
 from homeassistant.components.switch import PLATFORM_SCHEMA
 from homeassistant.const import DEVICE_DEFAULT_NAME
 from homeassistant.helpers.entity import ToggleEntity
+from homeassistant.components import history
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,6 +26,15 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
         outlet = int(data['outlet'])
         outlets.append(RFOutletSwitch(rfoutlet, name, product, channel, outlet))
     add_devices(outlets)
+
+    for outlet in outlets:
+        states = history.get_last_state_changes(hass, 1, outlet.entity_id)
+        if states:
+          states = states[outlet.entity_id]
+          if len(states) > 0:
+            state = states[0]
+            if state.state == 'on':
+              outlet.turn_on()
 
 
 class RFOutletSwitch(ToggleEntity):
