@@ -76,6 +76,10 @@ class RFOutletSwitch(ToggleEntity):
         return self._name
 
     @property
+    def unique_id(self):
+        return str(self.product) + str(self.channel) + str(self.outlet)
+
+    @property
     def should_poll(self):
         """No polling needed."""
         return False
