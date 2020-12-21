@@ -180,6 +180,18 @@ bool RFOutlet::getState(product_t product, const char *channel, int outlet) {
 	return state;
 }
 
+bool RFOutlet::isBusy() {
+	bool busy;
+
+	pthread_mutex_lock(&mutex);
+
+	busy = !updatedDevices.empty();
+
+	pthread_mutex_unlock(&mutex);
+
+	return busy;
+}
+
 void* RFOutlet::start(void* self) {
 	((RFOutlet*)self)->run();
 
@@ -356,8 +368,13 @@ int main(int argc, char **argv) {
 		printf("%s [pin315] [pin433] [product] [channel] [number] [on/off]\n", argv[0]);
 		return 1;
 	}
+
 	RFOutlet outlet(atoi(argv[1]), atoi(argv[2]));
 	outlet.setState(RFOutlet::parseProduct(argv[3]), argv[4], atoi(argv[5]), RFOutlet::parseState(argv[6]));
+
+	while (outlet.isBusy()) {
+		outlet.delay(1000000);
+	}
 }
 
 #endif

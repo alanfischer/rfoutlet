@@ -40,6 +40,8 @@ public:
 
 	void setState(product_t product, const char* channel, int outlet, bool state);
 	bool getState(product_t product, const char* channel, int outlet);
+	bool isBusy();
+	void delay(int microseconds);
 
 	static void logf(const char* format,...);
 	static void setLog(void (*cb)(const char*));
@@ -53,7 +55,6 @@ protected:
 	void sendState(product_t product, char channel, int outlet, bool state);
 	void send(int pin, int shortTime, int longTime, uint8_t *message, int length);
 	void write(int pin, bool value);
-	void delay(int microseconds);
 
 	int pin315, pin433;
 	std::string valuefilename315, valuefilename433;

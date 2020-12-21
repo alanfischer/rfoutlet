@@ -7,12 +7,37 @@ from homeassistant.components.switch import PLATFORM_SCHEMA
 from homeassistant.const import DEVICE_DEFAULT_NAME
 from homeassistant.helpers.entity import ToggleEntity
 from homeassistant.components import history
+import homeassistant.helpers.config_validation as cv
+import voluptuous as vol
+import sys
+import os
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+os.environ['LD_LIBRARY_PATH'] = os.path.dirname(os.path.abspath(__file__))
 
 _LOGGER = logging.getLogger(__name__)
 
 CONF_PIN315 = 'pin315'
 CONF_PIN433 = 'pin433'
 CONF_OUTLETS = 'outlets'
+
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
+    {
+        vol.Optional(CONF_PIN315): cv.positive_int,
+        vol.Required(CONF_PIN433): cv.positive_int,
+        vol.Required(CONF_OUTLETS): vol.All(
+            cv.ensure_list,
+            [
+                {
+                    vol.Optional('name'): cv.string,
+                    vol.Optional('product'): cv.string,
+                    vol.Required('channel'): cv.string,
+                    vol.Optional('outlet'): cv.string,
+                }
+            ]
+        )
+    }
+)
 
 # pylint: disable=unused-argument
 def setup_platform(hass, config, add_devices, discovery_info=None):
@@ -28,14 +53,14 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     add_devices(outlets)
 
     for outlet in outlets:
-        states = history.get_last_state_changes(hass, 1, outlet.entity_id)
-        if states:
-          states = states[outlet.entity_id]
-          if len(states) > 0:
-            state = states[0]
-            if state.state == 'on':
-              outlet.turn_on()
-
+        if outlet.entity_id:
+            states = history.get_last_state_changes(hass, 1, outlet.entity_id)
+            if states:
+                states = states[outlet.entity_id]
+                if len(states) > 0:
+                    state = states[0]
+                    if state.state == 'on':
+                        outlet.turn_on()
 
 class RFOutletSwitch(ToggleEntity):
     def __init__(self, rfoutlet, name, product, channel, outlet):
