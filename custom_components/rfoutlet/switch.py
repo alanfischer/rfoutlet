@@ -7,6 +7,7 @@ from homeassistant.components.switch import PLATFORM_SCHEMA
 from homeassistant.const import DEVICE_DEFAULT_NAME
 from homeassistant.helpers.entity import ToggleEntity
 from homeassistant.components import history
+from typing import Any, Dict, Generic, List, Optional, Type, TypeVar
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 import sys
@@ -69,6 +70,7 @@ class RFOutletSwitch(ToggleEntity):
         self.product = product
         self.channel = channel
         self.outlet = outlet
+        self.rfoutlet_id = str(self.product) + str(self.channel) + str(self.outlet)
 
     @property
     def name(self):
@@ -77,7 +79,7 @@ class RFOutletSwitch(ToggleEntity):
 
     @property
     def unique_id(self):
-        return str(self.product) + str(self.channel) + str(self.outlet)
+        return self.rfoutlet_id
 
     @property
     def should_poll(self):
@@ -98,3 +100,12 @@ class RFOutletSwitch(ToggleEntity):
         """Turn the device off."""
         self.rfoutlet.setState(self.product, self.channel, self.outlet, False)
         self.schedule_update_ha_state()
+
+    @property
+    def device_state_attributes(self) -> Optional[Dict[str, Any]]:
+        """Return the state attributes of the device."""
+        attr = {}
+
+        attr["RFOutlet Id"] = self.rfoutlet_id
+
+        return attr
