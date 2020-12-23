@@ -53,16 +53,6 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
         outlets.append(RFOutletSwitch(rfoutlet, name, product, channel, outlet))
     add_devices(outlets)
 
-    for outlet in outlets:
-        if outlet.entity_id:
-            states = history.get_last_state_changes(hass, 1, outlet.entity_id)
-            if states:
-                states = states[outlet.entity_id]
-                if len(states) > 0:
-                    state = states[0]
-                    if state.state == 'on':
-                        outlet.turn_on()
-
 class RFOutletSwitch(ToggleEntity):
     def __init__(self, rfoutlet, name, product, channel, outlet):
         self._name = name or DEVICE_DEFAULT_NAME
@@ -100,6 +90,16 @@ class RFOutletSwitch(ToggleEntity):
         """Turn the device off."""
         self.rfoutlet.setState(self.product, self.channel, self.outlet, False)
         self.schedule_update_ha_state()
+
+    async def async_added_to_hass(self):
+        """Setup states now that device is in hass"""
+        states = history.get_last_state_changes(self.hass, 1, self.entity_id)
+        if states:
+            states = states[self.entity_id]
+            if states != None and len(states) > 0:
+                state = states[0]
+                if state != None and state.state == 'on':
+                    self.turn_on()
 
     @property
     def device_state_attributes(self) -> Optional[Dict[str, Any]]:
