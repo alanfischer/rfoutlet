@@ -40,4 +40,4 @@ License
 -------
     - MIT License
 
-Any questions please contact: alan@lightningtoads.com
+Any questions please contact: me@alan.fish
